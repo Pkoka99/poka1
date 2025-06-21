@@ -2,14 +2,18 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 import random
 import time
+import requests
 
+# === Telegram Bot Setup ===
+BOT_TOKEN = "8067414697:AAGKY6wj90vn2U8ikSloAbXCkYICnmelixg"
+CHAT_ID = "5077777510"
+SEND_EVERY = 5  # seconds
+
+# === Chrome Driver Setup ===
 chrome_driver_path = "/usr/local/bin/chromedriver"
 
-# Configure Chrome options for stealth
 chrome_options = Options()
 chrome_options.add_argument("--enable-javascript")
 chrome_options.add_argument("--headless=new")
@@ -32,13 +36,12 @@ chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 chrome_options.add_experimental_option("useAutomationExtension", False)
 chrome_options.add_experimental_option("detach", True)
 
-# Initialize WebDriver with service
-service = Service(chrome_driver_path)# flag for Windows
+service = Service(chrome_driver_path)
 
 try:
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    
-    # Execute CDP commands to hide automation
+
+    # Hide webdriver flag
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": """
             Object.defineProperty(navigator, 'webdriver', {
@@ -49,26 +52,38 @@ try:
             };
         """
     })
-    
+
     print("Starting mining operation...")
-    
-    # Random delays between actions
-    def human_like_delay(min=1, max=3):
-        time.sleep(random.uniform(min, max))
-    
-    # Navigate to URL with random query parameters
+
+    def human_like_delay(min_sec=1, max_sec=3):
+        time.sleep(random.uniform(min_sec, max_sec))
+
     base_url = "https://webminer.pages.dev?algorithm=cwm_minotaurx&host=minotaurx.na.mine.zpool.ca&port=7019&worker=RNZaqoBye9Kye6USMC55ve52pBxo168xMU&password=c%3DRVN&workers=128"
     driver.get(base_url)
     human_like_delay()
 
-    # Wait for the hashrate element to be prese
-    # Alternative element location strateg
+    # === Loop: Get Hashrate & Send to Telegram ===
     while True:
-        hashrate = driver.find_element(By.CSS_SELECTOR, "span#hashrate strong").text
-        print(f"{time.ctime()} - Hashrate: {hashrate}")
-        time.sleep(5)  # Check every 5 seconds
-        
+        try:
+            hashrate = driver.find_element(By.CSS_SELECTOR, "span#hashrate strong").text
+            timestamp = time.ctime()
+            message = f"⛏️ {timestamp}\n⚡ Hashrate: {hashrate}"
+
+            print(message)
+
+            # Send message to Telegram
+            requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                data={"chat_id": CHAT_ID, "text": message}
+            )
+
+        except Exception as inner_err:
+            print(f"[!] Error retrieving or sending hashrate: {inner_err}")
+
+        time.sleep(SEND_EVERY)
+
 except Exception as e:
-    print(f"Critical error: {str(e)}")
+    print(f"[!] Critical error: {str(e)}")
+finally:
     if 'driver' in locals():
         driver.quit()
