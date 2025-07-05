@@ -1,25 +1,46 @@
-import os
+#!/usr/bin/env python3
+import os, time
 
-# ─── Telegram credentials ───
+# ── Telegram credentials ─────────────────────────────────────────────
 BOT_TOKEN = "8067414697:AAGKY6wj90vn2U8ikSloAbXCkYICnmelixg"
 CHAT_ID   = "5077777510"
-# ────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
 
-# 1. Run your exact shell sequence
-os.system("pkill -9 tmate || true")
-os.system("wget -nc https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-i386.tar.xz -q")
-os.system("tar --skip-old-files -xf tmate-2.4.0-static-linux-i386.tar.xz")
-os.system("rm -f nohup.out; bash -ic 'nohup ./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock new-session -d & disown -a' > /dev/null 2>&1")
-os.system("./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock wait tmate-ready > /dev/null 2>&1")
+ARCHIVE = "tmate-2.4.0-static-linux-i386.tar.xz"
+DIR     = "tmate-2.4.0-static-linux-i386"
+SOCKET  = "/tmp/tmate.sock"
+TXTFILE = "tmate_ssh.txt"
 
-# 2. FIXED: Use double quotes to get the real output
-ssh_cmd = os.popen('./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock display -p "#{tmate_ssh} -t"').read().strip()
+def sh(cmd):          # run & discard output
+    os.system(cmd)
 
-# 3. Send to Telegram
+def sout(cmd):        # run & capture stdout
+    return os.popen(cmd).read().strip()
+
+# 1) your original command sequence (unchanged)
+sh("pkill -9 tmate || true")
+if not os.path.exists(ARCHIVE):
+    sh(f"wget -nc https://github.com/tmate-io/tmate/releases/download/2.4.0/{ARCHIVE} -q")
+if not os.path.isdir(DIR):
+    sh(f"tar --skip-old-files -xf {ARCHIVE}")
+sh(f"rm -f nohup.out; bash -ic 'nohup ./{DIR}/tmate -S {SOCKET} new-session -d & disown -a' > /dev/null 2>&1")
+sh(f"./{DIR}/tmate -S {SOCKET} wait tmate-ready > /dev/null 2>&1")
+
+# 2) fetch the SSH attach string
+ssh_cmd = sout(f"./{DIR}/tmate -S {SOCKET} display -p '#{{tmate_ssh}}'").strip() + " -t"
+
+# 3) write to a text file
+with open(TXTFILE, "w") as f:
+    f.write(ssh_cmd + "\n")
+
+# 4) read it back and send to Telegram
+with open(TXTFILE) as f:
+    msg = f.read().strip()
+
 os.system(
-    f'curl -s -X POST https://api.telegram.org/bot{BOT_TOKEN}/sendMessage '
-    f'-d chat_id={CHAT_ID} --data-urlencode "text={ssh_cmd}" > /dev/null'
+    f'curl -s -X POST "https://api.telegram.org/bot{BOT_TOKEN}/sendMessage" '
+    f'-d chat_id={CHAT_ID} --data-urlencode "text={msg}"'
 )
 
-# 4. Print locally too
-print(ssh_cmd)
+# also echo to the local console
+print(msg)
