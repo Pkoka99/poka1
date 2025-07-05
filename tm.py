@@ -1,75 +1,25 @@
-#!/usr/bin/env python3
-import subprocess, os, platform, urllib.parse, urllib.request, shutil, sys, textwrap, re
+import os
 
+# ─── Telegram credentials ───
 BOT_TOKEN = "8067414697:AAGKY6wj90vn2U8ikSloAbXCkYICnmelixg"
 CHAT_ID   = "5077777510"
+# ────────────────────────────
 
-VERSION   = "2.4.0"
-ARCH_MAP  = {
-    "x86_64":  "x86_64",
-    "amd64":   "x86_64",
-    "i386":    "i386",
-    "i686":    "i386",
-    "aarch64": "arm64v8",
-    "arm64":   "arm64v8",
-    "armv7l":  "armhf",
-}
-arch = ARCH_MAP.get(platform.machine())
-if not arch:
-    sys.exit(f"❌ Unsupported arch: {platform.machine()}")
+# 1. Run your exact shell sequence
+os.system("pkill -9 tmate")
+os.system("wget -nc https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-i386.tar.xz -q")
+os.system("tar --skip-old-files -xf tmate-2.4.0-static-linux-i386.tar.xz")
+os.system("rm -f nohup.out; bash -ic 'nohup ./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock new-session -d & disown -a' > /dev/null 2>&1")
+os.system("./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock wait tmate-ready > /dev/null 2>&1")
 
-ARCHIVE   = f"tmate-{VERSION}-static-linux-{arch}.tar.xz"
-TMATE_URL = f"https://github.com/tmate-io/tmate/releases/download/{VERSION}/{ARCHIVE}"
-EXTRACTED = re.sub(r"\.tar\.xz$", "", ARCHIVE)
-SOCKET    = "/tmp/tmate.sock"
+# 2. Grab the SSH attach string
+ssh_cmd = os.popen("./tmate-2.4.0-static-linux-i386/tmate -S /tmp/tmate.sock display -p '#{tmate_ssh} -t'").read().strip()
 
-def run(cmd, **kw):
-    kw.setdefault("shell", True)
-    kw.setdefault("check", True)
-    return subprocess.run(cmd, **kw)
+# 3. Send it to Telegram (curl invoked via os.system)
+os.system(
+    f'curl -s -X POST https://api.telegram.org/bot{BOT_TOKEN}/sendMessage '
+    f'-d chat_id={CHAT_ID} --data-urlencode "text={ssh_cmd}" > /dev/null'
+)
 
-def ensure_tmate():
-    if not shutil.which(f"./{EXTRACTED}/tmate"):
-        run("pkill -9 tmate || true", check=False, stdout=subprocess.DEVNULL)
-        if not os.path.exists(ARCHIVE):
-            run(f"wget -nc {TMATE_URL}", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        run(f"tar --skip-old-files -xf {ARCHIVE}", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        run(f"chmod +x ./{EXTRACTED}/tmate")
-
-def start_tmate():
-    run(f"nohup ./{EXTRACTED}/tmate -S {SOCKET} new-session -d & disown",
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-def wait_ready():
-    run(f"./{EXTRACTED}/tmate -S {SOCKET} wait tmate-ready",
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-def get_ssh():
-    out = run(f"./{EXTRACTED}/tmate -S {SOCKET} display -p '#{{tmate_ssh}} -t'",
-              text=True, capture_output=True)
-    return out.stdout.strip()
-
-def telegram(msg):
-    url  = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = urllib.parse.urlencode({"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"}).encode()
-    with urllib.request.urlopen(url, data, timeout=10) as r:
-        if r.status != 200:
-            raise RuntimeError(f"Telegram HTTP {r.status}")
-
-def main():
-    ensure_tmate()
-    start_tmate()
-    wait_ready()
-    ssh = get_ssh()
-    banner = textwrap.dedent(f"""\
-        ✅ *tmate ready*
-        ```
-        {ssh}
-        ```
-        _Copy-paste to attach_
-    """)
-    print(banner)
-    telegram(banner)
-
-if __name__ == "__main__":
-    main()
+# 4. Echo locally as well
+print(ssh_cmd)
