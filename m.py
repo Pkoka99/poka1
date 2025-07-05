@@ -12,7 +12,7 @@ link_file = pathlib.Path("tmate.txt")
 link      = link_file.read_text().strip()            # hapus \n di ujung
 
 # 2. Susun pesan
-message = f"🔐 TMATE SSH link:\n{link}"
+message = f"{link}"
 
 # 3. Kirim ke Telegram
 url  = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
