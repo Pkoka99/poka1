@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # --- KONFIG TELEGRAM ---
-BOT_TOKEN = "8067414697:AAGKY6wj90vn2U8ikSloAbXCkYICnmelixg"
+BOT_TOKEN = "6544141692:AAEaDh-ega9I4EqqUc6waTrrBoe2GS92vY4"
 CHAT_ID   = "5077777510"
 
 # ---------------------------------
