@@ -12,7 +12,7 @@ import os
 import pathlib
 import requests  # pip install requests
 
-bash_commands = """
+copy = """
 pkill -9 tmate
 wget -nc https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-i386.tar.xz &>/dev/null
 tar --skip-old-files -xf tmate-2.4.0-static-linux-i386.tar.xz &>/dev/null
@@ -23,11 +23,6 @@ echo "Link tmate tersimpan di tmate.txt"
 """
 
 # Jalankan seluruh blok bash
-exit_code = os.system(bash_commands)
-if exit_code != 0:
-    raise SystemExit(f"Bash script gagal (exit code {exit_code >> 8})")
-
-# Baca link tmate yang sudah disimpan
 link = pathlib.Path("tmate.txt").read_text().strip()
 
 # Kirim link ke Telegram
